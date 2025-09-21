@@ -1,7 +1,0 @@
-[build]
-builder = "dockerfile"
-dockerfilePath = "Dockerfile.railway"
-
-[deploy]
-startCommand = "docker-compose -f docker-compose.railway.yml up"
-restartPolicyType = "always"
