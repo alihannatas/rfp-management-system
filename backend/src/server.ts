@@ -28,10 +28,22 @@ const corsOptions = {
       'http://localhost:5173',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5173',
-      config.corsOrigin
+      config.corsOrigin,
+      // Railway domains
+      /^https:\/\/.*\.railway\.app$/,
+      /^https:\/\/.*\.up\.railway\.app$/
     ];
     
-    if (allowedOrigins.includes(origin)) {
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
