@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rfp-postgres-dev
+    environment:
+      POSTGRES_DB: rfp_management
+      POSTGRES_USER: rfp_user
+      POSTGRES_PASSWORD: rfp_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - rfp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rfp_user -d rfp_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Development)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: rfp-backend-dev
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://rfp_user:rfp_password@postgres:5432/rfp_management?schema=public
+      JWT_SECRET: dev-secret-key
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rfp-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
+    restart: unless-stopped
+    command: npm run dev
+
+  # Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: rfp-frontend-dev
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - rfp-network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+    command: npm run dev
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  rfp-network:
+    driver: bridge
+
+

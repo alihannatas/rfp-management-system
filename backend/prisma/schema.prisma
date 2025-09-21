@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  SUPPLIER
+  ADMIN
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RFPStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ProductCategory {
+  ELECTRONICS
+  SOFTWARE
+  HARDWARE
+  SERVICES
+  CONSULTING
+  MAINTENANCE
+  OTHER
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  company   String?
+  phone     String?
+  role      UserRole @default(CUSTOMER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  projects     Project[]
+  proposals    Proposal[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Project {
+  id          Int           @id @default(autoincrement())
+  title       String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Decimal?
+  customerId  Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  customer User  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rfps     RFP[]
+  products Product[]
+
+  @@map("projects")
+}
+
+model Product {
+  id          Int            @id @default(autoincrement())
+  name        String
+  description String?
+  category    ProductCategory
+  unit        String? // kg, piece, hour, etc.
+  projectId   Int
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rfpItems RFPItem[]
+
+  @@map("products")
+}
+
+model RFP {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  status      RFPStatus @default(DRAFT)
+  startDate   DateTime
+  endDate     DateTime
+  projectId   Int
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items     RFPItem[]
+  proposals Proposal[]
+
+  @@map("rfps")
+}
+
+model RFPItem {
+  id        Int      @id @default(autoincrement())
+  quantity  Int
+  notes     String?
+  rfpId     Int
+  productId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  rfp     RFP     @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  proposals ProposalItem[]
+
+  @@map("rfp_items")
+}
+
+model Proposal {
+  id          Int            @id @default(autoincrement())
+  supplierId  Int
+  rfpId       Int
+  status      ProposalStatus @default(PENDING)
+  totalAmount Decimal?
+  notes       String?
+  submittedAt DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  supplier User          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  rfp      RFP           @relation(fields: [rfpId], references: [id], onDelete: Cascade)
+  items    ProposalItem[]
+
+  @@map("proposals")
+}
+
+model ProposalItem {
+  id         Int      @id @default(autoincrement())
+  proposalId Int
+  rfpItemId  Int
+  unitPrice  Decimal
+  totalPrice Decimal
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  rfpItem  RFPItem  @relation(fields: [rfpItemId], references: [id], onDelete: Cascade)
+
+  @@map("proposal_items")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   // 'proposal', 'rfp', 'project', etc.
+  data      Json?    // Additional data for the notification
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
