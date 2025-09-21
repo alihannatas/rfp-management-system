@@ -1,98 +1,98 @@
 # RFP Management System - Docker Setup
 
-Bu proje Docker Compose ile kolayca ayağa kaldırılabilir. Tüm servisler (PostgreSQL, Backend API, Frontend) tek komutla çalışır.
+This project can be easily set up using Docker Compose. All services (PostgreSQL, Backend API, Frontend) run with a single command.
 
-## 🚀 Hızlı Başlangıç
+## 🚀 Quick Start
 
-### 1. Otomatik Kurulum (Önerilen)
+### 1. Automatic Setup (Recommended)
 
 ```bash
-# Kurulum scriptini çalıştır
+# Run the setup script
 ./scripts/setup.sh
 ```
 
-### 2. Manuel Kurulum
+### 2. Manual Setup
 
 ```bash
-# 1. SSL sertifikalarını oluştur
+# 1. Create SSL certificates
 mkdir -p nginx/ssl
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout nginx/ssl/key.pem \
     -out nginx/ssl/cert.pem \
-    -subj "/C=TR/ST=Istanbul/L=Istanbul/O=RFP Management/CN=localhost"
+    -subj "/C=US/ST=State/L=City/O=RFP Management/CN=localhost"
 
-# 2. Environment dosyalarını kopyala
+# 2. Copy environment files
 cp docker.env backend/.env
 echo "VITE_API_URL=http://localhost:3001/api" > frontend/.env
 
-# 3. Servisleri başlat
+# 3. Start services
 docker-compose up --build -d
 
-# 4. Veritabanı migration'larını çalıştır
+# 4. Run database migrations
 docker-compose exec backend npx prisma migrate deploy
 docker-compose exec backend npx prisma generate
 ```
 
-## 📋 Servisler
+## 📋 Services
 
-| Servis | Port | Açıklama |
-|--------|------|----------|
-| Frontend | 3000 | React uygulaması |
+| Service | Port | Description |
+|---------|------|-------------|
+| Frontend | 3000 | React application |
 | Backend API | 3001 | Node.js API |
-| PostgreSQL | 5432 | Veritabanı |
+| PostgreSQL | 5432 | Database |
 | Nginx | 80/443 | Reverse proxy |
 
-## 🛠️ Komutlar
+## 🛠️ Commands
 
-### Temel Komutlar
+### Basic Commands
 
 ```bash
-# Servisleri başlat
+# Start services
 docker-compose up -d
 
-# Servisleri durdur
+# Stop services
 docker-compose down
 
-# Logları görüntüle
+# View logs
 docker-compose logs -f
 
-# Belirli servisin loglarını görüntüle
+# View specific service logs
 docker-compose logs -f backend
 docker-compose logs -f frontend
 docker-compose logs -f postgres
 ```
 
-### Geliştirme Komutları
+### Development Commands
 
 ```bash
-# Development modunda çalıştır
+# Run in development mode
 docker-compose -f docker-compose.dev.yml up -d
 
-# Servisleri yeniden başlat
+# Restart services
 docker-compose restart
 
-# Belirli servisi yeniden başlat
+# Restart specific service
 docker-compose restart backend
 ```
 
-### Veritabanı Komutları
+### Database Commands
 
 ```bash
-# Veritabanına bağlan
+# Connect to database
 docker-compose exec postgres psql -U rfp_user -d rfp_management
 
-# Migration çalıştır
+# Run migrations
 docker-compose exec backend npx prisma migrate dev
 
-# Prisma Studio aç
+# Open Prisma Studio
 docker-compose exec backend npx prisma studio
 ```
 
-## 🔧 Konfigürasyon
+## 🔧 Configuration
 
 ### Environment Variables
 
-Backend için `backend/.env`:
+Backend `backend/.env`:
 ```env
 DATABASE_URL="postgresql://rfp_user:rfp_password@postgres:5432/rfp_management?schema=public"
 JWT_SECRET="your-super-secret-jwt-key-here"
@@ -100,12 +100,12 @@ PORT=3001
 NODE_ENV="production"
 ```
 
-Frontend için `frontend/.env`:
+Frontend `frontend/.env`:
 ```env
 VITE_API_URL=http://localhost:3001/api
 ```
 
-### Veritabanı
+### Database
 
 - **Host**: localhost
 - **Port**: 5432
@@ -113,39 +113,39 @@ VITE_API_URL=http://localhost:3001/api
 - **Username**: rfp_user
 - **Password**: rfp_password
 
-## 🌐 Erişim
+## 🌐 Access
 
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:3001
 - **API Health Check**: http://localhost:3001/health
 - **Prisma Studio**: `docker-compose exec backend npx prisma studio`
 
-## 🐛 Sorun Giderme
+## 🐛 Troubleshooting
 
-### Servisler Başlamıyor
+### Services Won't Start
 
 ```bash
-# Tüm servisleri durdur ve temizle
+# Stop all services and clean up
 docker-compose down -v
 docker system prune -f
 
-# Tekrar başlat
+# Start again
 docker-compose up --build -d
 ```
 
-### Veritabanı Bağlantı Hatası
+### Database Connection Error
 
 ```bash
-# PostgreSQL loglarını kontrol et
+# Check PostgreSQL logs
 docker-compose logs postgres
 
-# Veritabanı durumunu kontrol et
+# Check database status
 docker-compose exec postgres pg_isready -U rfp_user -d rfp_management
 ```
 
-### Port Çakışması
+### Port Conflict
 
-Eğer portlar kullanımdaysa, `docker-compose.yml` dosyasındaki port numaralarını değiştirin:
+If ports are in use, change port numbers in `docker-compose.yml`:
 
 ```yaml
 ports:
@@ -154,7 +154,7 @@ ports:
   - "5432:5432"  # PostgreSQL
 ```
 
-## 📁 Dosya Yapısı
+## 📁 File Structure
 
 ```
 rfp-management-system/
@@ -177,24 +177,24 @@ rfp-management-system/
     └── nginx.conf             # Frontend nginx config
 ```
 
-## 🔒 Güvenlik
+## 🔒 Security
 
-### Production için Önemli Notlar
+### Important Notes for Production
 
-1. **JWT Secret**: `docker.env` dosyasındaki `JWT_SECRET`'ı güçlü bir değerle değiştirin
-2. **Database Password**: `rfp_password`'ı güçlü bir şifreyle değiştirin
-3. **SSL Certificates**: Production için gerçek SSL sertifikaları kullanın
-4. **Environment Variables**: Hassas bilgileri environment variables olarak geçin
+1. **JWT Secret**: Change `JWT_SECRET` in `docker.env` to a strong value
+2. **Database Password**: Change `rfp_password` to a strong password
+3. **SSL Certificates**: Use real SSL certificates for production
+4. **Environment Variables**: Pass sensitive information as environment variables
 
-### SSL Sertifikaları
+### SSL Certificates
 
-Development için self-signed sertifikalar otomatik oluşturulur. Production için:
+Self-signed certificates are automatically created for development. For production:
 
 ```bash
-# Let's Encrypt ile SSL sertifikası al
+# Get SSL certificate with Let's Encrypt
 certbot certonly --standalone -d yourdomain.com
 
-# Sertifikaları nginx/ssl/ klasörüne kopyala
+# Copy certificates to nginx/ssl/ folder
 cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem nginx/ssl/cert.pem
 cp /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/ssl/key.pem
 ```
@@ -204,20 +204,20 @@ cp /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/ssl/key.pem
 ### Health Checks
 
 ```bash
-# Tüm servislerin durumunu kontrol et
+# Check status of all services
 docker-compose ps
 
-# Health check sonuçlarını görüntüle
+# View health check results
 docker-compose exec backend curl -f http://localhost:3001/health
 ```
 
 ### Logs
 
 ```bash
-# Tüm logları takip et
+# Follow all logs
 docker-compose logs -f
 
-# Belirli servisin loglarını filtrele
+# Filter logs for specific service
 docker-compose logs -f backend | grep ERROR
 ```
 
@@ -225,9 +225,9 @@ docker-compose logs -f backend | grep ERROR
 
 ### Production Deployment
 
-1. Environment variables'ları production değerleriyle güncelleyin
-2. SSL sertifikalarını gerçek sertifikalarla değiştirin
-3. Docker Compose ile deploy edin:
+1. Update environment variables with production values
+2. Replace SSL certificates with real certificates
+3. Deploy with Docker Compose:
 
 ```bash
 docker-compose -f docker-compose.yml up -d
@@ -236,12 +236,10 @@ docker-compose -f docker-compose.yml up -d
 ### Scaling
 
 ```bash
-# Backend servisini scale et
+# Scale backend service
 docker-compose up -d --scale backend=3
 
-# Nginx load balancer ile çalışır
+# Works with Nginx load balancer
 ```
 
-Bu Docker setup ile RFP Management System'i kolayca ayağa kaldırabilir ve yönetebilirsiniz! 🎉
-
-
+With this Docker setup, you can easily run and manage the RFP Management System! 🎉
