@@ -14,6 +14,7 @@ import { Package, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { validateForm, validateRequired } from '../lib/validation';
 
 const PRODUCT_CATEGORIES = [
   { value: 'ELECTRONICS', label: 'Elektronik' },
@@ -31,6 +32,7 @@ export default function ProductsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const queryClient = useQueryClient();
 
@@ -86,12 +88,35 @@ export default function ProductsPage() {
       category: formData.get('category') as string,
       unit: formData.get('unit') as string,
     };
+
+    // Validation
+    const validationRules = {
+      name: [(value: string) => validateRequired(value, 'Ürün adı')],
+      category: [(value: string) => validateRequired(value, 'Kategori')],
+      unit: [(value: string) => validateRequired(value, 'Birim')],
+    };
+
+    const validationErrors = validateForm(productData, validationRules);
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     createMutation.mutate(productData);
   };
 
   const handleEdit = (product: any) => {
     setEditingProduct(product);
+    setErrors({});
     setIsEditDialogOpen(true);
+  };
+
+  const handleInputChange = (field: string) => {
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const handleUpdate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -103,6 +128,22 @@ export default function ProductsPage() {
       category: formData.get('category') as string,
       unit: formData.get('unit') as string,
     };
+
+    // Validation
+    const validationRules = {
+      name: [(value: string) => validateRequired(value, 'Ürün adı')],
+      category: [(value: string) => validateRequired(value, 'Kategori')],
+      unit: [(value: string) => validateRequired(value, 'Birim')],
+    };
+
+    const validationErrors = validateForm(productData, validationRules);
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     updateMutation.mutate({ productId: editingProduct.id, data: productData });
   };
 
@@ -150,7 +191,14 @@ export default function ProductsPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Ürün Adı</Label>
-                <Input id="name" name="name" required placeholder="Ürün adını girin" />
+                <Input 
+                  id="name" 
+                  name="name" 
+                  placeholder="Ürün adını girin" 
+                  onChange={() => handleInputChange('name')}
+                  className={errors.name ? 'border-red-500' : ''}
+                />
+                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Açıklama</Label>
@@ -158,8 +206,8 @@ export default function ProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Kategori</Label>
-                <Select name="category" required>
-                  <SelectTrigger>
+                <Select name="category" onValueChange={() => handleInputChange('category')}>
+                  <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Kategori seçin" />
                   </SelectTrigger>
                   <SelectContent>
@@ -170,10 +218,18 @@ export default function ProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="unit">Birim</Label>
-                <Input id="unit" name="unit" placeholder="adet, kg, m², vb." />
+                <Input 
+                  id="unit" 
+                  name="unit" 
+                  placeholder="adet, kg, m², vb." 
+                  onChange={() => handleInputChange('unit')}
+                  className={errors.unit ? 'border-red-500' : ''}
+                />
+                {errors.unit && <p className="text-sm text-red-500">{errors.unit}</p>}
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -281,10 +337,12 @@ export default function ProductsPage() {
                 <Input 
                   id="edit-name" 
                   name="name" 
-                  required 
                   defaultValue={editingProduct.name}
                   placeholder="Ürün adını girin" 
+                  onChange={() => handleInputChange('name')}
+                  className={errors.name ? 'border-red-500' : ''}
                 />
+                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Açıklama</Label>
@@ -297,8 +355,8 @@ export default function ProductsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-category">Kategori</Label>
-                <Select name="category" required defaultValue={editingProduct.category}>
-                  <SelectTrigger>
+                <Select name="category" defaultValue={editingProduct.category} onValueChange={() => handleInputChange('category')}>
+                  <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Kategori seçin" />
                   </SelectTrigger>
                   <SelectContent>
@@ -309,6 +367,7 @@ export default function ProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-unit">Birim</Label>
@@ -317,7 +376,10 @@ export default function ProductsPage() {
                   name="unit" 
                   defaultValue={editingProduct.unit}
                   placeholder="adet, kg, m², vb." 
+                  onChange={() => handleInputChange('unit')}
+                  className={errors.unit ? 'border-red-500' : ''}
                 />
+                {errors.unit && <p className="text-sm text-red-500">{errors.unit}</p>}
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Building2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { validateForm, validateEmail, validatePassword, validateRequired, validatePhone } from '../lib/validation';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -23,6 +24,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -30,16 +32,28 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    const validationRules = {
+      email: [(value: string) => validateEmail(value)],
+      password: [(value: string) => validatePassword(value)],
+      firstName: [(value: string) => validateRequired(value, 'Ad')],
+      lastName: [(value: string) => validateRequired(value, 'Soyad')],
+      phone: [(value: string) => value ? validatePhone(value) : null],
+    };
+
+    const validationErrors = validateForm(formData, validationRules);
+    
+    // Custom validation for confirm password
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Şifreler eşleşmiyor');
+      validationErrors.confirmPassword = 'Şifreler eşleşmiyor';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    if (formData.password.length < 8) {
-      toast.error('Şifre en az 8 karakter olmalıdır');
-      return;
-    }
-
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -59,6 +73,11 @@ export default function RegisterPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+    
+    // Clear error when user starts typing
+    if (errors[e.target.name]) {
+      setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
   };
 
   const handleRoleChange = (value: string) => {
@@ -98,22 +117,24 @@ export default function RegisterPage() {
                   <Input
                     id="firstName"
                     name="firstName"
-                    required
                     value={formData.firstName}
                     onChange={handleChange}
                     placeholder="Adınız"
+                    className={errors.firstName ? 'border-red-500' : ''}
                   />
+                  {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName">Soyad</Label>
                   <Input
                     id="lastName"
                     name="lastName"
-                    required
                     value={formData.lastName}
                     onChange={handleChange}
                     placeholder="Soyadınız"
+                    className={errors.lastName ? 'border-red-500' : ''}
                   />
+                  {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
                 </div>
               </div>
 
@@ -123,11 +144,12 @@ export default function RegisterPage() {
                   id="email"
                   name="email"
                   type="email"
-                  required
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="ornek@email.com"
+                  className={errors.email ? 'border-red-500' : ''}
                 />
+                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
@@ -162,7 +184,9 @@ export default function RegisterPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Telefon numarası"
+                  className={errors.phone ? 'border-red-500' : ''}
                 />
+                {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
               </div>
 
               <div className="space-y-2">
@@ -172,10 +196,10 @@ export default function RegisterPage() {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    required
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Şifrenizi girin"
+                    className={errors.password ? 'border-red-500' : ''}
                   />
                   <button
                     type="button"
@@ -189,6 +213,7 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
 
               <div className="space-y-2">
@@ -198,10 +223,10 @@ export default function RegisterPage() {
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    required
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Şifrenizi tekrar girin"
+                    className={errors.confirmPassword ? 'border-red-500' : ''}
                   />
                   <button
                     type="button"
@@ -215,6 +240,7 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+                {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
               </div>
 
               <Button

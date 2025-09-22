@@ -12,6 +12,7 @@ import { FileText, Plus, Search, Edit, Trash2, ToggleLeft, ToggleRight, Eye } fr
 import { formatDate } from '../lib/utils';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { validateForm, validateRequired, validateDateRange } from '../lib/validation';
 
 const RFP_STATUSES = [
   { value: 'DRAFT', label: 'Taslak', color: 'bg-gray-100 text-gray-800' },
@@ -27,6 +28,7 @@ export default function RFPsPage() {
   const [editingRFP, setEditingRFP] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Array<{productId: number, quantity: number, notes: string}>>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const queryClient = useQueryClient();
 
@@ -91,12 +93,49 @@ export default function RFPsPage() {
       endDate: formData.get('endDate') as string,
       items: selectedProducts,
     };
+
+    // Validation
+    const validationRules = {
+      title: [(value: string) => validateRequired(value, 'RFP başlığı')],
+      description: [(value: string) => validateRequired(value, 'Açıklama')],
+      startDate: [(value: string) => validateRequired(value, 'Başlangıç tarihi')],
+      endDate: [(value: string) => validateRequired(value, 'Bitiş tarihi')],
+    };
+
+    const validationErrors = validateForm(rfpData, validationRules);
+    
+    // Date range validation
+    if (rfpData.startDate && rfpData.endDate) {
+      const dateRangeError = validateDateRange(rfpData.startDate, rfpData.endDate);
+      if (dateRangeError) {
+        validationErrors.endDate = dateRangeError;
+      }
+    }
+
+    // Products validation
+    if (selectedProducts.length === 0) {
+      validationErrors.products = 'En az bir ürün seçmelisiniz';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     createMutation.mutate(rfpData);
   };
 
   const handleEdit = (rfp: any) => {
     setEditingRFP(rfp);
+    setErrors({});
     setIsEditDialogOpen(true);
+  };
+
+  const handleInputChange = (field: string) => {
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const handleUpdate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -108,6 +147,31 @@ export default function RFPsPage() {
       startDate: formData.get('startDate') as string,
       endDate: formData.get('endDate') as string,
     };
+
+    // Validation
+    const validationRules = {
+      title: [(value: string) => validateRequired(value, 'RFP başlığı')],
+      description: [(value: string) => validateRequired(value, 'Açıklama')],
+      startDate: [(value: string) => validateRequired(value, 'Başlangıç tarihi')],
+      endDate: [(value: string) => validateRequired(value, 'Bitiş tarihi')],
+    };
+
+    const validationErrors = validateForm(rfpData, validationRules);
+    
+    // Date range validation
+    if (rfpData.startDate && rfpData.endDate) {
+      const dateRangeError = validateDateRange(rfpData.startDate, rfpData.endDate);
+      if (dateRangeError) {
+        validationErrors.endDate = dateRangeError;
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     updateMutation.mutate({ rfpId: editingRFP.id, data: rfpData });
   };
 
@@ -168,20 +232,48 @@ export default function RFPsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">RFP Başlığı</Label>
-                  <Input id="title" name="title" required placeholder="RFP başlığını girin" />
+                  <Input 
+                    id="title" 
+                    name="title" 
+                    placeholder="RFP başlığını girin" 
+                    onChange={() => handleInputChange('title')}
+                    className={errors.title ? 'border-red-500' : ''}
+                  />
+                  {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Başlangıç Tarihi</Label>
-                  <Input id="startDate" name="startDate" type="date" required />
+                  <Input 
+                    id="startDate" 
+                    name="startDate" 
+                    type="date" 
+                    onChange={() => handleInputChange('startDate')}
+                    className={errors.startDate ? 'border-red-500' : ''}
+                  />
+                  {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Açıklama</Label>
-                <Textarea id="description" name="description" placeholder="RFP açıklaması" />
+                <Textarea 
+                  id="description" 
+                  name="description" 
+                  placeholder="RFP açıklaması" 
+                  onChange={() => handleInputChange('description')}
+                  className={errors.description ? 'border-red-500' : ''}
+                />
+                {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="endDate">Bitiş Tarihi</Label>
-                <Input id="endDate" name="endDate" type="date" required />
+                <Input 
+                  id="endDate" 
+                  name="endDate" 
+                  type="date" 
+                  onChange={() => handleInputChange('endDate')}
+                  className={errors.endDate ? 'border-red-500' : ''}
+                />
+                {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
               </div>
               
               <div className="space-y-4">
@@ -192,6 +284,7 @@ export default function RFPsPage() {
                     Ürün Ekle
                   </Button>
                 </div>
+                {errors.products && <p className="text-sm text-red-500">{errors.products}</p>}
                 
                 {selectedProducts.map((item, index) => (
                   <div key={index} className="grid grid-cols-12 gap-2 items-end">
@@ -365,10 +458,12 @@ export default function RFPsPage() {
                 <Input 
                   id="edit-title" 
                   name="title" 
-                  required 
                   defaultValue={editingRFP.title}
                   placeholder="RFP başlığını girin" 
+                  onChange={() => handleInputChange('title')}
+                  className={errors.title ? 'border-red-500' : ''}
                 />
+                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Açıklama</Label>
@@ -377,7 +472,10 @@ export default function RFPsPage() {
                   name="description" 
                   defaultValue={editingRFP.description}
                   placeholder="RFP açıklaması" 
+                  onChange={() => handleInputChange('description')}
+                  className={errors.description ? 'border-red-500' : ''}
                 />
+                {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -386,9 +484,11 @@ export default function RFPsPage() {
                     id="edit-startDate" 
                     name="startDate" 
                     type="date" 
-                    required 
                     defaultValue={editingRFP.startDate?.split('T')[0]}
+                    onChange={() => handleInputChange('startDate')}
+                    className={errors.startDate ? 'border-red-500' : ''}
                   />
+                  {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-endDate">Bitiş Tarihi</Label>
@@ -396,9 +496,11 @@ export default function RFPsPage() {
                     id="edit-endDate" 
                     name="endDate" 
                     type="date" 
-                    required 
                     defaultValue={editingRFP.endDate?.split('T')[0]}
+                    onChange={() => handleInputChange('endDate')}
+                    className={errors.endDate ? 'border-red-500' : ''}
                   />
+                  {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
                 </div>
               </div>
               <div className="flex justify-end space-x-2">

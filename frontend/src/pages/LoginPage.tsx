@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Building2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { validateForm, validateEmail, validatePassword } from '../lib/validation';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -15,12 +16,28 @@ export default function LoginPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const validationRules = {
+      email: [(value: string) => validateEmail(value)],
+      password: [(value: string) => validatePassword(value)],
+    };
+
+    const validationErrors = validateForm(formData, validationRules);
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -39,6 +56,11 @@ export default function LoginPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+    
+    // Clear error when user starts typing
+    if (errors[e.target.name]) {
+      setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
   };
 
   return (
@@ -71,11 +93,12 @@ export default function LoginPage() {
                   id="email"
                   name="email"
                   type="email"
-                  required
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="ornek@email.com"
+                  className={errors.email ? 'border-red-500' : ''}
                 />
+                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
@@ -85,10 +108,10 @@ export default function LoginPage() {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    required
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Şifrenizi girin"
+                    className={errors.password ? 'border-red-500' : ''}
                   />
                   <button
                     type="button"
@@ -102,6 +125,7 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
 
               <Button

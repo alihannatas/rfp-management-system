@@ -6,12 +6,15 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { User, Save, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { validateForm, validateRequired, validatePassword, validatePhone } from '../lib/validation';
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
   
   const [profileData, setProfileData] = useState({
     firstName: user?.firstName || '',
@@ -28,6 +31,22 @@ export default function ProfilePage() {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const validationRules = {
+      firstName: [(value: string) => validateRequired(value, 'Ad')],
+      lastName: [(value: string) => validateRequired(value, 'Soyad')],
+      phone: [(value: string) => value ? validatePhone(value) : null],
+    };
+
+    const validationErrors = validateForm(profileData, validationRules);
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -44,16 +63,25 @@ export default function ProfilePage() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    const validationRules = {
+      currentPassword: [(value: string) => validateRequired(value, 'Mevcut şifre')],
+      newPassword: [(value: string) => validatePassword(value)],
+    };
+
+    const validationErrors = validateForm(passwordData, validationRules);
+    
+    // Custom validation for confirm password
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('Yeni şifreler eşleşmiyor');
+      validationErrors.confirmPassword = 'Yeni şifreler eşleşmiyor';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setPasswordErrors(validationErrors);
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
-      toast.error('Yeni şifre en az 8 karakter olmalıdır');
-      return;
-    }
-
+    setPasswordErrors({});
     setIsLoading(true);
 
     try {
@@ -77,6 +105,11 @@ export default function ProfilePage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+    
+    // Clear error when user starts typing
+    if (errors[e.target.name]) {
+      setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
   };
 
   const handlePasswordChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +117,11 @@ export default function ProfilePage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+    
+    // Clear error when user starts typing
+    if (passwordErrors[e.target.name]) {
+      setPasswordErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
   };
 
   return (
@@ -157,8 +195,9 @@ export default function ProfilePage() {
                       name="firstName"
                       value={profileData.firstName}
                       onChange={handleProfileChange}
-                      required
+                      className={errors.firstName ? 'border-red-500' : ''}
                     />
+                    {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Soyad</Label>
@@ -167,8 +206,9 @@ export default function ProfilePage() {
                       name="lastName"
                       value={profileData.lastName}
                       onChange={handleProfileChange}
-                      required
+                      className={errors.lastName ? 'border-red-500' : ''}
                     />
+                    {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -187,7 +227,9 @@ export default function ProfilePage() {
                     name="phone"
                     value={profileData.phone}
                     onChange={handleProfileChange}
+                    className={errors.phone ? 'border-red-500' : ''}
                   />
+                  {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                 </div>
                 <div className="flex space-x-2">
                   <Button type="submit" disabled={isLoading}>
@@ -247,8 +289,9 @@ export default function ProfilePage() {
                     type="password"
                     value={passwordData.currentPassword}
                     onChange={handlePasswordChangeInput}
-                    required
+                    className={passwordErrors.currentPassword ? 'border-red-500' : ''}
                   />
+                  {passwordErrors.currentPassword && <p className="text-sm text-red-500">{passwordErrors.currentPassword}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">Yeni Şifre</Label>
@@ -258,8 +301,9 @@ export default function ProfilePage() {
                     type="password"
                     value={passwordData.newPassword}
                     onChange={handlePasswordChangeInput}
-                    required
+                    className={passwordErrors.newPassword ? 'border-red-500' : ''}
                   />
+                  {passwordErrors.newPassword && <p className="text-sm text-red-500">{passwordErrors.newPassword}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Yeni Şifre Tekrar</Label>
@@ -269,8 +313,9 @@ export default function ProfilePage() {
                     type="password"
                     value={passwordData.confirmPassword}
                     onChange={handlePasswordChangeInput}
-                    required
+                    className={passwordErrors.confirmPassword ? 'border-red-500' : ''}
                   />
+                  {passwordErrors.confirmPassword && <p className="text-sm text-red-500">{passwordErrors.confirmPassword}</p>}
                 </div>
                 <div className="flex space-x-2">
                   <Button type="submit" disabled={isLoading}>

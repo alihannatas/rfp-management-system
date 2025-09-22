@@ -12,6 +12,7 @@ import { Plus, Search, FolderOpen, Edit, Trash2, Eye } from 'lucide-react';
 import { formatDate, formatCurrency } from '../lib/utils';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { validateForm, validateRequired, validateDateRange, validatePositiveNumber } from '../lib/validation';
 
 const PROJECT_STATUSES = [
   { value: 'ACTIVE', label: 'Aktif', color: 'bg-green-100 text-green-800' },
@@ -25,6 +26,7 @@ export default function ProjectsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const queryClient = useQueryClient();
 
@@ -80,11 +82,38 @@ export default function ProjectsPage() {
       endDate: formData.get('endDate') as string,
       budget: formData.get('budget') ? parseFloat(formData.get('budget') as string) : undefined,
     };
+
+    // Validation
+    const validationRules = {
+      title: [(value: string) => validateRequired(value, 'Proje başlığı')],
+      description: [(value: string) => validateRequired(value, 'Açıklama')],
+      budget: [(value: any) => validateRequired(value, 'Bütçe'), (value: any) => validatePositiveNumber(value, 'Bütçe')],
+      startDate: [(value: string) => validateRequired(value, 'Başlangıç tarihi')],
+      endDate: [(value: string) => validateRequired(value, 'Bitiş tarihi')],
+    };
+
+    const validationErrors = validateForm(projectData, validationRules);
+    
+    // Date range validation
+    if (projectData.startDate && projectData.endDate) {
+      const dateRangeError = validateDateRange(projectData.startDate, projectData.endDate);
+      if (dateRangeError) {
+        validationErrors.endDate = dateRangeError;
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     createMutation.mutate(projectData);
   };
 
   const handleEdit = (project: any) => {
     setEditingProject(project);
+    setErrors({});
     setIsEditDialogOpen(true);
   };
 
@@ -98,12 +127,44 @@ export default function ProjectsPage() {
       endDate: formData.get('endDate') as string,
       budget: formData.get('budget') ? parseFloat(formData.get('budget') as string) : undefined,
     };
+
+    // Validation
+    const validationRules = {
+      title: [(value: string) => validateRequired(value, 'Proje başlığı')],
+      description: [(value: string) => validateRequired(value, 'Açıklama')],
+      budget: [(value: any) => validateRequired(value, 'Bütçe'), (value: any) => validatePositiveNumber(value, 'Bütçe')],
+      startDate: [(value: string) => validateRequired(value, 'Başlangıç tarihi')],
+      endDate: [(value: string) => validateRequired(value, 'Bitiş tarihi')],
+    };
+
+    const validationErrors = validateForm(projectData, validationRules);
+    
+    // Date range validation
+    if (projectData.startDate && projectData.endDate) {
+      const dateRangeError = validateDateRange(projectData.startDate, projectData.endDate);
+      if (dateRangeError) {
+        validationErrors.endDate = dateRangeError;
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     updateMutation.mutate({ projectId: editingProject.id, data: projectData });
   };
 
   const handleDelete = (projectId: number) => {
     if (confirm('Bu projeyi silmek istediğinizden emin misiniz?')) {
       deleteMutation.mutate(projectId);
+    }
+  };
+
+  const handleInputChange = (field: string) => {
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -145,25 +206,63 @@ export default function ProjectsPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Proje Başlığı</Label>
-                <Input id="title" name="title" required placeholder="Proje başlığını girin" />
+                <Input 
+                  id="title" 
+                  name="title" 
+                  placeholder="Proje başlığını girin" 
+                  onChange={() => handleInputChange('title')}
+                  className={errors.title ? 'border-red-500' : ''}
+                />
+                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Açıklama</Label>
-                <Textarea id="description" name="description" placeholder="Proje açıklaması" />
+                <Textarea 
+                  id="description" 
+                  name="description" 
+                  placeholder="Proje açıklaması" 
+                  onChange={() => handleInputChange('description')}
+                  className={errors.description ? 'border-red-500' : ''}
+                />
+                {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Başlangıç Tarihi</Label>
-                  <Input id="startDate" name="startDate" type="date" />
+                  <Input 
+                    id="startDate" 
+                    name="startDate" 
+                    type="date" 
+                    onChange={() => handleInputChange('startDate')}
+                    className={errors.startDate ? 'border-red-500' : ''}
+                  />
+                  {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">Bitiş Tarihi</Label>
-                  <Input id="endDate" name="endDate" type="date" />
+                  <Input 
+                    id="endDate" 
+                    name="endDate" 
+                    type="date" 
+                    onChange={() => handleInputChange('endDate')}
+                    className={errors.endDate ? 'border-red-500' : ''}
+                  />
+                  {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="budget">Bütçe (₺)</Label>
-                <Input id="budget" name="budget" type="number" step="0.01" min="0" placeholder="Proje bütçesi" />
+                <Input 
+                  id="budget" 
+                  name="budget" 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  placeholder="Proje bütçesi" 
+                  onChange={() => handleInputChange('budget')}
+                  className={errors.budget ? 'border-red-500' : ''}
+                />
+                {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -283,10 +382,12 @@ export default function ProjectsPage() {
                 <Input 
                   id="edit-title" 
                   name="title" 
-                  required 
                   defaultValue={editingProject.title}
                   placeholder="Proje başlığını girin" 
+                  onChange={() => handleInputChange('title')}
+                  className={errors.title ? 'border-red-500' : ''}
                 />
+                {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Açıklama</Label>
@@ -295,7 +396,10 @@ export default function ProjectsPage() {
                   name="description" 
                   defaultValue={editingProject.description}
                   placeholder="Proje açıklaması" 
+                  onChange={() => handleInputChange('description')}
+                  className={errors.description ? 'border-red-500' : ''}
                 />
+                {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -305,7 +409,10 @@ export default function ProjectsPage() {
                     name="startDate" 
                     type="date" 
                     defaultValue={editingProject.startDate?.split('T')[0]}
+                    onChange={() => handleInputChange('startDate')}
+                    className={errors.startDate ? 'border-red-500' : ''}
                   />
+                  {errors.startDate && <p className="text-sm text-red-500">{errors.startDate}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-endDate">Bitiş Tarihi</Label>
@@ -314,7 +421,10 @@ export default function ProjectsPage() {
                     name="endDate" 
                     type="date" 
                     defaultValue={editingProject.endDate?.split('T')[0]}
+                    onChange={() => handleInputChange('endDate')}
+                    className={errors.endDate ? 'border-red-500' : ''}
                   />
+                  {errors.endDate && <p className="text-sm text-red-500">{errors.endDate}</p>}
                 </div>
               </div>
               <div className="space-y-2">
@@ -327,7 +437,10 @@ export default function ProjectsPage() {
                   min="0" 
                   defaultValue={editingProject.budget}
                   placeholder="Proje bütçesi" 
+                  onChange={() => handleInputChange('budget')}
+                  className={errors.budget ? 'border-red-500' : ''}
                 />
+                {errors.budget && <p className="text-sm text-red-500">{errors.budget}</p>}
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
