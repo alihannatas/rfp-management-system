@@ -17,6 +17,7 @@ import ProposalDetailPage from './pages/ProposalDetailPage';
 import ActiveRFPsPage from './pages/ActiveRFPsPage';
 import ProfilePage from './pages/ProfilePage';
 import Layout from './components/layout/Layout';
+import RoleGuard from './components/guards/RoleGuard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,8 +65,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
-
   return (
     <Routes>
       {/* Public Routes */}
@@ -100,26 +99,88 @@ function AppRoutes() {
         <Route path="profile" element={<ProfilePage />} />
         
         {/* Customer Routes */}
-        {user?.role === 'CUSTOMER' && (
-          <>
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-            <Route path="projects/:projectId/products" element={<ProductsPage />} />
-            <Route path="projects/:projectId/rfps" element={<RFPsPage />} />
-            <Route path="projects/:projectId/rfps/:rfpId" element={<RFPDetailPage />} />
-            <Route path="proposals/:proposalId" element={<ProposalDetailPage />} />
-          </>
-        )}
+        <Route 
+          path="projects" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <ProjectsPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="projects/:projectId" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <ProjectDetailPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="projects/:projectId/products" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <ProductsPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="projects/:projectId/rfps" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <RFPsPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="projects/:projectId/rfps/:rfpId" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER']}>
+              <RFPDetailPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="proposals/:proposalId" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER', 'SUPPLIER']}>
+              <ProposalDetailPage />
+            </RoleGuard>
+          } 
+        />
 
         {/* Supplier Routes */}
-        {user?.role === 'SUPPLIER' && (
-          <>
-            <Route path="active-rfps" element={<ActiveRFPsPage />} />
-            <Route path="rfps/:rfpId" element={<RFPDetailPage />} />
-            <Route path="proposals" element={<ProposalsPage />} />
-            <Route path="proposals/:proposalId" element={<ProposalDetailPage />} />
-          </>
-        )}
+        <Route 
+          path="active-rfps" 
+          element={
+            <RoleGuard allowedRoles={['SUPPLIER']}>
+              <ActiveRFPsPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="rfps/:rfpId" 
+          element={
+            <RoleGuard allowedRoles={['SUPPLIER']}>
+              <RFPDetailPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="proposals" 
+          element={
+            <RoleGuard allowedRoles={['SUPPLIER']}>
+              <ProposalsPage />
+            </RoleGuard>
+          } 
+        />
+        <Route 
+          path="proposals/:proposalId" 
+          element={
+            <RoleGuard allowedRoles={['CUSTOMER', 'SUPPLIER']}>
+              <ProposalDetailPage />
+            </RoleGuard>
+          } 
+        />
       </Route>
 
       {/* Catch all route */}
