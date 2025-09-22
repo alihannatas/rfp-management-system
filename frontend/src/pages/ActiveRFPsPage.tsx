@@ -19,6 +19,7 @@ export default function ActiveRFPsPage() {
   const [selectedRFP, setSelectedRFP] = useState<any>(null);
   const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
   const [proposalItems, setProposalItems] = useState<Array<{rfpItemId: number, unitPrice: number, notes: string}>>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const queryClient = useQueryClient();
 
@@ -51,11 +52,29 @@ export default function ActiveRFPsPage() {
       notes: ''
     })) || [];
     setProposalItems(items);
+    setErrors({});
     setIsProposalDialogOpen(true);
   };
 
   const handleSubmitProposal = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Validation
+    const validationErrors: Record<string, string> = {};
+    
+    // Validate each proposal item
+    proposalItems.forEach((item, index) => {
+      if (!item.unitPrice || item.unitPrice <= 0) {
+        validationErrors[`unitPrice_${index}`] = 'Birim fiyat gerekli ve pozitif olmalı';
+      }
+    });
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    
+    setErrors({});
     const formData = new FormData(e.currentTarget);
     const proposalData = {
       rfpId: selectedRFP.id,
@@ -69,6 +88,13 @@ export default function ActiveRFPsPage() {
     const updated = [...proposalItems];
     updated[index] = { ...updated[index], [field]: value };
     setProposalItems(updated);
+    
+    // Clear error when user starts typing
+    if (field === 'unitPrice' && errors[`unitPrice_${index}`]) {
+      const newErrors = { ...errors };
+      delete newErrors[`unitPrice_${index}`];
+      setErrors(newErrors);
+    }
   };
 
 
@@ -207,8 +233,11 @@ export default function ActiveRFPsPage() {
                           min="0"
                           value={proposalItems[index]?.unitPrice || 0}
                           onChange={(e) => updateProposalItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          required
+                          className={errors[`unitPrice_${index}`] ? 'border-red-500' : ''}
                         />
+                        {errors[`unitPrice_${index}`] && (
+                          <p className="text-red-500 text-sm mt-1">{errors[`unitPrice_${index}`]}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor={`notes-${index}`}>Notlar</Label>
